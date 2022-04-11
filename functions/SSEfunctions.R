@@ -325,6 +325,7 @@ SSEfun <- function(x,cohorts,Z,cou,
     ## final penalty for smoothness
     P <- bdiag.spam(Pxy1, Pxy2)
     coef <- coef.st
+    conv <- TRUE
     ## iteration
     for(it in 1:max.it){
       ## penalty for the concaveness for child
@@ -368,7 +369,13 @@ SSEfun <- function(x,cohorts,Z,cou,
       tUr <- t(U) %*% r
       ## updating coefficients with a d-step 
       coef.old <- coef
-      coef <- solve(tUWUpP, tUr + tUWU%*%coef)
+      coefTRY <- try(solve(tUWUpP, tUr + tUWU%*%coef),silent = T)
+      if(class(coefTRY)[1]=="try-error" | any(is.na(coefTRY)) | all(coefTRY==0)){
+        conv <- FALSE
+        break
+      }else{
+        coef <- coefTRY
+      }
       coef <- d*coef.old + (1-d)*coef
       ## update weights for shape constraints
       ## infant, log-concaveness
@@ -390,6 +397,7 @@ SSEfun <- function(x,cohorts,Z,cou,
       ## stopping loop at convergence
       if(dif.coef < 1e-04 & it > 4) break
     }
+    if (conv){
     ## compute devaince
     zz <- z
     zz[z==0] <- 10^-8
@@ -406,7 +414,11 @@ SSEfun <- function(x,cohorts,Z,cou,
     cat(it, signif(dif.coef,8), bic, "\n\n")
     ## returning list with various objects
     out <- list(bic=bic, coef=coef, it=it,
-                dif.coef=dif.coef, diagH=diagH)
+                dif.coef=dif.coef, diagH=diagH,conv=conv)
+    }else{
+      out <- list(bic=NA, coef=NA, it=NA,
+                  dif.coef=NA, diagH=NA,conv=conv)
+    }
     return(out)
   }
   
@@ -417,55 +429,61 @@ SSEfun <- function(x,cohorts,Z,cou,
   ## small ridge penalty for numerical stability
   Pr <- 10^-4 * diag.spam(length(coef.st))
   ## maximum number of iteration
-  if (is.null(max.it)) max.it <- 100
+  if (is.null(max.it)) max.it <- 250
   ## smoothing parameters
   if (is.null(lambdas)) lambdas <- c(10^1.5,10^1.5,10^1.5)
   ## start time
   start_time <- Sys.time()
   ## estimating the SSE
   fitFIN <- SSEestimationFUN(lambdas, coef.st)
+  if (!fitFIN$conv){
+    ## if not converged, use higher smoothing parameters
+    lambdas <- c(10^2,10^2,10^2)
+    fitFIN <- SSEestimationFUN(lambdas, coef.st)
+  }
   ## end time
   end_time <- Sys.time()
   print(end_time-start_time)
   
   ## estimated coefficients
-  coef.hat <- fitFIN$coef
-  
-  ## linear predictor for each component
-  etas <- NULL
-  for(i in 1:nx){
-    etas[[i]] <- XX[[i]] %*% coef.hat[ind[[i]]]
+  if (fitFIN$conv){
+    coef.hat <- fitFIN$coef
+    
+    ## linear predictor for each component
+    etas <- NULL
+    for(i in 1:nx){
+      etas[[i]] <- XX[[i]] %*% coef.hat[ind[[i]]]
+    }
+    eta1.hat <- etas[[1]]
+    eta2.hat <- etas[[2]]
+    
+    ## linear predictor in a matrix over the whole x
+    ETA.hat <- matrix(NA, mn, nx)
+    for(i in 1:nx){
+      ETA.hat[which(indR[[i]]==1),i] <- etas[[i]]
+    }
+    ## linear predictor for overall mortality
+    eta.hat <- log(apply(exp(ETA.hat), 1, sum, na.rm=TRUE))
+    
+    ## fitted values for each component
+    gamma1.hat <- exp(eta1.hat)
+    gamma2.hat <- exp(eta2.hat)
+    gamma.hat <- exp(eta.hat) * c(unlist(indR))
+    
+    GAMMA1.hat <- matrix(gamma1.hat,length(x1),n)
+    GAMMA2.hat <- matrix(gamma2.hat,length(x2),n)
+    
+    ## expected values
+    # mu.hat <- exp(eta.hat)*e
+    mu.hat <- exp(eta.hat)
+    MU.hat <- matrix(mu.hat,m,n)
+    
+    ## deviance residuals
+    res1 <- sign(z - mu.hat)
+    res2 <- sqrt(2 * (z * log(z/mu.hat) - z + mu.hat))
+    res <- res1 * res2 ## in vector
+    RES <- matrix(res, m, n) ## in matrix
   }
-  eta1.hat <- etas[[1]]
-  eta2.hat <- etas[[2]]
-  
-  ## linear predictor in a matrix over the whole x
-  ETA.hat <- matrix(NA, mn, nx)
-  for(i in 1:nx){
-    ETA.hat[which(indR[[i]]==1),i] <- etas[[i]]
-  }
-  ## linear predictor for overall mortality
-  eta.hat <- log(apply(exp(ETA.hat), 1, sum, na.rm=TRUE))
-  
-  ## fitted values for each component
-  gamma1.hat <- exp(eta1.hat)
-  gamma2.hat <- exp(eta2.hat)
-  gamma.hat <- exp(eta.hat) * c(unlist(indR))
-  
-  GAMMA1.hat <- matrix(gamma1.hat,length(x1),n)
-  GAMMA2.hat <- matrix(gamma2.hat,length(x2),n)
-  
-  ## expected values
-  # mu.hat <- exp(eta.hat)*e
-  mu.hat <- exp(eta.hat)
-  MU.hat <- matrix(mu.hat,m,n)
-  
-  ## deviance residuals
-  res1 <- sign(z - mu.hat)
-  res2 <- sqrt(2 * (z * log(z/mu.hat) - z + mu.hat))
-  res <- res1 * res2 ## in vector
-  RES <- matrix(res, m, n) ## in matrix
-  
   ## output
   out <- list(MU.hat=MU.hat,GAMMA1.hat=GAMMA1.hat,GAMMA2.hat=GAMMA2.hat,
               RES=RES,coef.hat=coef.hat,x1=x1,x2=x2)
