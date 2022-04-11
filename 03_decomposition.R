@@ -22,7 +22,7 @@ SAVE.PLOT <- T
 SAVE.RES <- T
 
 ## loading data and functions
-cou <- "USA"
+cou <- "SWE"
 load(paste0("data/clean/",cou,"_arrays_clean.rdata"))
 source("functions/SSEfunctions.R")
 
