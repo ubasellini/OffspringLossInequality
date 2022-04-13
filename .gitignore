@@ -1,3 +1,13 @@
+# Large data files
+
+data/demokin*
+data/input/unwpp/WPP2019_Fertility_by_Age.csv
+data/input/unwpp/WPP2019_Life_Table_Medium.csv
+data/input/unwpp/WPP2019_PopulationBySingleAgeSex_1950-2019.csv
+data/input/unwpp/WPP2019_PopulationBySingleAgeSex_2020-2100.csv
+
+data/clean_temp
+
 # History files
 .Rhistory
 .Rapp.history
