@@ -1,4 +1,15 @@
-
+## --------------------------------------------------------- ##
+##
+## Routines to reproduce the results of the paper:
+## "When do parents bury a child? Quantifying uncertainty
+## in the parental age at offspring loss"
+## 
+## Functions to conduct decomposition analysis
+##
+##
+## Code by Ugofilippo Basellini (2022) unless otherwise stated
+##
+## --------------------------------------------------------- ##
 
 ## function to derive death counts over ages and cohorts
 deriveZ <- function(x,cohorts,H,POP,Q,

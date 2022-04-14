@@ -5,7 +5,9 @@
 ## "When do parents bury a child? Quantifying uncertainty
 ## in the parental age at offspring loss"
 ## 
-## STEP 3: decomposition analysis
+## STEP 4: decomposition analysis
+##
+## Code by Ugofilippo Basellini (2022) unless otherwise stated
 ##
 ## --------------------------------------------------------- ##
 

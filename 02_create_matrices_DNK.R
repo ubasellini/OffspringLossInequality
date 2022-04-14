@@ -1,4 +1,14 @@
-# Note: wd should be one level up from the R dir - where the Rproj is stored
+## --------------------------------------------------------- ##
+##
+## Routines to reproduce the results of the paper:
+## "When do parents bury a child? Quantifying uncertainty
+## in the parental age at offspring loss"
+## 
+## STEP 2: Create matrix objects for analysis for Denmark
+##
+## Code by Diego Alburez-Gutierrez (2022) unless otherwise stated
+##
+## --------------------------------------------------------- ##
 
 # This script does the following using data for Denmark combining HMD, HFD, and WPP:
 
@@ -9,7 +19,7 @@
 rm(list=ls())
 
 library(tidyverse)
-source("functions/DiegoFUNS.R")
+source("functions/analysisFUNS.R")
 
 # 0. Parameters ~~~~~~~~~ ----------- 
 
@@ -98,15 +108,14 @@ lt_1_1 <- rate_dat[["lt_1_1"]]
 asfr_1_1 <- rate_dat[["asfr_1_1"]] 
 pop_1_1 <- rate_dat[["pop_1_1"]] 
 
-# C. Kinship matrices ~~~~~~~~~ ----------- 
+# B. Kinship matrices ~~~~~~~~~ ----------- 
 
 # In this section, I take the UNWPP rates and run the matrix kinship models to 
 # get arrays of the expected number of children and mothers by birth cohort and 
 # ages in non-stable population. 
 # I recommend checking the Methods sectino of our paper for more details. 
 # Note that I use an optimised version of `DemoKin::kins()` that considers 
-# only mothers and daughters (See the vignette of DemoKin and 
-# Caswell 2019 for details). 
+# only mothers and daughters.
 # This function saves the results to the disk and only needs to be run once!
 # Takes about 5 sec per year
 
@@ -193,7 +202,7 @@ for(cohort in cohorts){
   } # end get rates
 }  # end cohort loop
 
-# D. Estimate matrices for analysis ~~~~~~~~~ ----------- 
+# C. Estimate matrices for analysis ~~~~~~~~~ ----------- 
 
 # Here, I apply the time-variant method described in the paper's Methods 
 # section to get an array of the expected number of surviving children by child's
@@ -257,13 +266,6 @@ colnames(L) <-
   (1:dim(L)[2]) + min(cohorts_unwpp) - 1
 
 # Matrix of Population ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# gET LX COLUMNS OF A LIFE TABLE GIVEN A RADIX
-# AND VECTOR OF MORT PROBS
-get_lx <- function(l0, nqx){ 
-  lx <- cumprod(c(l0, 1 - nqx)) 
-  lx[-length(lx)]
-}
 
 l0_df <- 
   pop_1_1 %>% 

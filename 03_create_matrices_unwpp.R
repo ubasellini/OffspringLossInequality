@@ -1,4 +1,20 @@
+## --------------------------------------------------------- ##
+##
+## Routines to reproduce the results of the paper:
+## "When do parents bury a child? Quantifying uncertainty
+## in the parental age at offspring loss"
+## 
+## STEP 3: Create matrix objects for 16 countries
+##
+## Code by Diego Alburez-Gutierrez (2022) unless otherwise stated
+##
+## --------------------------------------------------------- ##
 
+# This script does the following using data for 16 countries using WPP data:
+
+# A. Load all data 
+# B. Approximates cohort data from period
+# C. Estimate matrices for analysis
 
 rm(list=ls())
 
@@ -6,11 +22,12 @@ library(tidyverse)
 library(data.table)
 library(countrycode)
 
-# These two are only needed if reestimate = T below
+# These two are only needed if reestimate = T inthe function 
+# get_unwpp_cohort_rates() below
 library(httr)
 library(quadprog)
 
-source("functions/DiegoFUNS.R")
+source("functions/analysisFUNS.R")
 
 # 0. Parameters --------
 # Countries to keep
@@ -86,9 +103,7 @@ cohort_lt <-
     , cohorts_unwpp
   )
 
-# 1. Get Data ------------
-
-# 1.1. Download or load data ==========
+# A. Load all data ~~~~~~~~~ ----------- 
 
 # We basically want the lx, LX, ex, asfr, and TFR for each country, 
 # historical and projected data.
@@ -125,13 +140,14 @@ pop_1_1 <- rates_l[['pop_1_1']]
 
 rm("rates_l")
 
-# 2. Kinship Matrix Models -------------
+# B. Kinship matrices ~~~~~~~~~ ----------- 
 
 # This runs DemoKin to get the matrices of maternal and 
 # offspring availability in non-stable populations.
 
-# Note that DemoKin uses PERIOD rates as input because
-# the models are basically leslie-type projections
+# It runs the model for all country/year combinations, so it
+# may take a while to run...
+
 
 if(run_matrix_models){
   get_kin_trees_unwpp(
@@ -149,9 +165,13 @@ if(run_matrix_models){
   )  
 }
 
-# 3. Estimate matrices for analysis ~~~~~~~~~ ----------- 
-
+# C. Estimate matrices for analysis ~~~~~~~~~ ----------- 
 # rcode ks4dgf
+
+# Here, I wrapped everything up in a function, but, essentially, we are doing
+# the same we did for Sweden and Denmark.
+# This function computes the different matrices needed for the analysis and
+# save the to the disk, one for each country. 
 
 for(con in lookup_c){
   get_matrices_wpp(country_keep = con, return_list = F) 
