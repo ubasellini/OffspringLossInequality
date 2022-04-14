@@ -1,13 +1,29 @@
 
 ## --------------------------------------------------------- ##
 ##
-## Routines to reproduce the results of the paper:
-## "When do parents bury a child? Quantifying uncertainty
-## in the parental age at offspring loss"
+##  Routines to reproduce the results of the paper:
+##  "When do parents bury a child? Quantifying uncertainty
+##  in the parental age at offspring loss"
 ## 
-## STEP 4: decomposition analysis
+##  STEP 4: decomposition analysis
 ##
-## Code by Ugofilippo Basellini (2022) unless otherwise stated
+##  sessionInfo() details:
+##
+##  R version 4.0.2 (2020-06-22)
+##  Platform: x86_64-w64-mingw32/x64 (64-bit)
+##  Running under: Windows 10 x64 (build 19044)
+##
+##  attached base packages:
+##  splines   grid    stats   graphics  grDevices utils   datasets 
+##  methods   base
+## 
+##  other attached packages:
+##  MortalitySmooth_2.3.4 lattice_0.20-41       svcm_0.1.2           
+##  Matrix_1.2-18         fields_11.6           spam_2.5-1           
+##  dotCall64_1.0-0       forcats_0.5.1         stringr_1.4.0        
+##  dplyr_1.0.7           purrr_0.3.4           readr_1.4.0          
+##  tidyr_1.1.4           tibble_3.1.5          ggplot2_3.3.5        
+##  tidyverse_1.3.1
 ##
 ## --------------------------------------------------------- ##
 
