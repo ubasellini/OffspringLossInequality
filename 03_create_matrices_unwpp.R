@@ -8,6 +8,22 @@
 ##
 ## Code by Diego Alburez-Gutierrez (2022) unless otherwise stated
 ##
+##  sessionInfo() details:
+##
+##  R version 4.0.2 (2020-06-22)
+##  Platform: x86_64-w64-mingw32/x64 (64-bit)
+##  Running under: Windows 10 x64 (build 19044)
+##
+##  attached base packages:
+##  stats   graphics  grDevices utils   datasets 
+##  methods   base
+## 
+##  other attached packages:
+##  quadprog_1.5-8        httr_1.4.2            countrycode_1.2.0 
+##  data.table_1.13.2     forcats_0.5.1         stringr_1.4.0        
+##  dplyr_1.0.7           purrr_0.3.4           readr_1.4.0          
+##  tidyr_1.1.4           tibble_3.1.5          ggplot2_3.3.5        
+##  tidyverse_1.3.1
 ## --------------------------------------------------------- ##
 
 # This script does the following using data for 16 countries using WPP data:
@@ -77,9 +93,9 @@ cohorts_demokin <- 1950:2050
 # Requires some thinking, but ultimately this shoudl be true:
 cohorts_kin <- cohorts_unwpp
 
-# Smaller selectio nof cohorts for which rates will be actually estimated
+# Smaller selection of cohorts for which rates will be actually estimated
 # If you don't need estimates for all cohorts, chose 
-# how many yeares you want in between cohort. if 
+# how many yeares you want in between cohort.  
 by_cohs <- 5
 coh_keep <- cohorts_kin[seq(1, length(cohorts_kin), by = by_cohs)]
 

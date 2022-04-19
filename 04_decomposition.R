@@ -7,6 +7,16 @@
 ## 
 ##  STEP 4: decomposition analysis
 ##
+##  NOTE: in order to run the analysis, you should download and 
+##  install the MortalitySmooth and svcm packages from the CRAN archive, 
+##  available at:
+##  https://cran.r-project.org/src/contrib/Archive/MortalitySmooth/
+##  https://cran.r-project.org/src/contrib/Archive/svcm/
+##  (download the latest .tar.gz files and install them from the
+##   Packages/Install/ Install from: Package Archive File)
+##
+##  Code by Ugofilippo Basellini (2022) unless otherwise stated
+##
 ##  sessionInfo() details:
 ##
 ##  R version 4.0.2 (2020-06-22)

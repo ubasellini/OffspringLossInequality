@@ -6,6 +6,24 @@
 ## 
 ## STEP 5: Process results to produce results reported in paper
 ##
+## Code by Diego Alburez-Gutierrez (2022) unless otherwise stated
+##
+##  sessionInfo() details:
+##
+##  R version 4.0.2 (2020-06-22)
+##  Platform: x86_64-w64-mingw32/x64 (64-bit)
+##  Running under: Windows 10 x64 (build 19044)
+##
+##  attached base packages:
+##  stats   graphics  grDevices utils   datasets 
+##  methods   base
+## 
+##  other attached packages:
+##  ggrepel_0.8.2         countrycode_1.2.0     patchwork_1.1.1
+##  forcats_0.5.1         stringr_1.4.0        
+##  dplyr_1.0.7           purrr_0.3.4           readr_1.4.0          
+##  tidyr_1.1.4           tibble_3.1.5          ggplot2_3.3.5        
+##  tidyverse_1.3.1
 ## --------------------------------------------------------- ##
 
 ## cleaning the workspace
