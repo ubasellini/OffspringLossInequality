@@ -205,6 +205,7 @@ if(!recompute){
       lapply(countries, get_maol_all_batch, type="sensitivity",wei.swe=wei.swe) %>% 
       bind_rows()
   }
+  
   # 2.2. Decomposed mean and SD ===============
   
   if (type=="main"){
@@ -219,10 +220,15 @@ if(!recompute){
   
   # 2.3. Get Prop offspring died ===========
   
+  if (type=="main"){
   prop_died <- 
     lapply(countries, get_share_offspring_died, asfr_coh) %>% 
     bind_rows() 
-  
+  }else{
+    prop_died <- 
+      lapply(countries, get_share_offspring_died, asfr_coh=asfr_coh,type="sensitivity",wei.swe=wei.swe) %>% 
+      bind_rows() 
+  }
   # 2.4. Combine and export ==========
   
   all_measures <- 
@@ -253,6 +259,7 @@ if(!recompute){
   }
   # 2.5. DF of age-composition of children that died ==============
   
+  if (type=="main"){
   cba <-  
     lapply(country_keep, get_cd_by_age_batch) %>%
     # lapply(countes, get_cd_by_age_batch) %>% 
@@ -275,7 +282,30 @@ if(!recompute){
   # dput(levels(cb$child_age))
   
   write.csv(cb, "results/summary/counts_by_child_age.csv", row.names = F)
-  
+  }else{
+    cba <-  
+      lapply(country_keep, get_cd_by_age_batch,type="sensitivity",wei.swe=wei.swe) %>%
+      # lapply(countes, get_cd_by_age_batch) %>% 
+      bind_rows()
+    
+    child_age_br <- c(0,4, seq(25, 100, 25))
+    
+    cb <- 
+      cba %>% 
+      filter(country %in% country_keep) %>% 
+      filter(mother_age >= 15) %>% 
+      mutate(
+        child_age2 = cut(child_age, child_age_br, include.lowest = T, right = T)
+        , country = factor(lookup_c[country], levels = lookup_c[country_keep])
+      ) %>% 
+      group_by(country, cohort, mother_age, child_age = child_age2) %>% 
+      summarise(value = sum(value, na.rm = T)) %>% 
+      ungroup()
+    
+    # dput(levels(cb$child_age))
+    
+    write.csv(cb, "results/summ_sens/counts_by_child_age.csv", row.names = F)
+  }
 }
 
 # B. Plots +++++++++++++++++ ----------
@@ -319,8 +349,11 @@ cb2 %>%
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
   )
 
+if (type=="main"){
 ggsave("figures/summary/!1_counts_by_child_age_death.pdf", width = 6, height = 3, units = "in")
-
+}else{
+  ggsave("figures/summ_sens/!1_counts_by_child_age_death.pdf", width = 6, height = 3, units = "in")
+}
 # 2. Summary measures (nondecomposed) =================
 
 # rcode kfns6
@@ -407,8 +440,11 @@ all_measures %>%
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
   ) 
 
+if (type=="main"){
 ggsave("figures/summary/!2_summary_nondecomp.pdf", width = 5, height = 3, units = "in")
-
+}else{
+  ggsave("figures/summ_sens/!2_summary_nondecomp.pdf", width = 5, height = 3, units = "in")
+}
 # 3. Count of child deaths decomposed ============
 # rcode ldshih
 
@@ -783,4 +819,8 @@ all_measures %>%
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
   ) 
 
+if (type=="main"){
 ggsave("figures/summary/!5_share_child_die.pdf", width = 4, height = 3, units = "in")
+}else{
+  ggsave("figures/summ_sens/!5_share_child_die.pdf", width = 4, height = 3, units = "in")
+}

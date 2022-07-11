@@ -98,6 +98,10 @@ for (i in 1:ncol(POP)){
 matplot(ages_mother,POP[,1:n],t="l",lty=1,col=rainbow(n))
 matplot(ages_mother,POP.STD[,1:n],t="l",lty=1,col=rainbow(n))
 
+## total population
+plot(as.numeric(colnames(D)),apply(POP,2,sum))
+points(as.numeric(colnames(D)),apply(POP.STD,2,sum),pch=4,col=2,lwd=2)
+
 ## compare population weights in original vs standardized populations
 WEI <- WEI.STD <- matrix(NA,nrow = nrow(POP),ncol = ncol(POP))
 i <- 1
