@@ -440,17 +440,22 @@ SSEfun <- function(x,cohorts,Z,cou,
   ## small ridge penalty for numerical stability
   Pr <- 10^-4 * diag.spam(length(coef.st))
   ## maximum number of iteration
-  if (is.null(max.it)) max.it <- 250
+  if (is.null(max.it)) max.it <- 300
   ## smoothing parameters
   if (is.null(lambdas)) lambdas <- c(10^1.5,10^1.5,10^1.5)
   ## start time
   start_time <- Sys.time()
   ## estimating the SSE
   fitFIN <- SSEestimationFUN(lambdas, coef.st)
-  if (!fitFIN$conv){
+  if (!fitFIN$conv | fitFIN$it==max.it){
     ## if not converged, use higher smoothing parameters
     lambdas <- c(10^2,10^2,10^2)
     fitFIN <- SSEestimationFUN(lambdas, coef.st)
+    if (!fitFIN$conv | fitFIN$it==max.it){
+      ## if not converged, use different smoothing parameters
+      lambdas <- c(10^1,10^1,10^2.5)
+      fitFIN <- SSEestimationFUN(lambdas, coef.st)
+    }
   }
   ## end time
   end_time <- Sys.time()

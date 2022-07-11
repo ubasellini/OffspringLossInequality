@@ -2111,7 +2111,8 @@ ungroup_fert2 <- function(df, add_country_year = F) {
 
 # What proportion of a woman\s birth cohort offspring
 # died in the mother's lifetime?
-get_share_offspring_died <- function(cou, asfr_coh, last_cohort = 2000){
+get_share_offspring_died <- function(cou, asfr_coh, last_cohort = 2000,
+                                     type="main",wei.swe=NULL){
   
   print(cou)
   load(paste0("data/clean/",cou,"_arrays_clean.rdata"))
@@ -2135,6 +2136,7 @@ get_share_offspring_died <- function(cou, asfr_coh, last_cohort = 2000){
   n_col <- length(ages_child)
   n_coh <- length(cohorts)
   
+  if (type=="main"){
   died_df <- 
     lapply(cohorts, share_offspring_died, H, Q, POP, asfr, cohorts, n_col, n_row, reprod_ages, ages_mother) %>% 
     bind_rows() %>% 
@@ -2143,6 +2145,25 @@ get_share_offspring_died <- function(cou, asfr_coh, last_cohort = 2000){
     rename(measure = name)
   
   died_df
+  }else{
+    ## compute standardized population
+    POP.STD <- matrix(NA,nrow = nrow(POP),ncol = ncol(POP))
+    for (i in 1:ncol(POP)){
+      ## weights current population
+      wei.curr <- POP[,i]/sum(POP[,i])
+      ## adjust with Swedish weights
+      POP.STD[,i] <- (wei.swe/wei.curr)*POP[,i]
+    }
+    
+    died_df <- 
+      lapply(cohorts, share_offspring_died, H, Q, POP.STD, asfr, cohorts, n_col, n_row, reprod_ages, ages_mother) %>% 
+      bind_rows() %>% 
+      pivot_longer(-cohort) %>% 
+      mutate(country = cou) %>% 
+      rename(measure = name)
+    
+    died_df
+  }
 }
 
 # What proportion of a woman\s birth cohort offspring
@@ -2468,7 +2489,7 @@ get_maol_all2 <- function(my.coh, H, deaths_mat , surv_mat, what = "median", coh
 }
 
 # Use this to get estimates for many countries using lapply
-get_maol_all_batch <- function(iso){
+get_maol_all_batch <- function(iso, type="main",wei.swe=NULL){
   
   # Load data
   # iso <- countrycode(country_name, "country.name", "iso3c")
@@ -2502,6 +2523,7 @@ get_maol_all_batch <- function(iso){
   
   # nu = h_{i,j}*pop_i*q_j
   
+  if (type=="main"){
   maol_all <- 
     unlist(
       lapply(
@@ -2537,6 +2559,51 @@ get_maol_all_batch <- function(iso){
     pivot_longer(c(M, SD), names_to = "measure")
   
   out  
+  }else{
+    ## compute standardized population
+    POP.STD <- matrix(NA,nrow = nrow(POP),ncol = ncol(POP))
+    for (i in 1:ncol(POP)){
+      ## weights current population
+      wei.curr <- POP[,i]/sum(POP[,i])
+      ## adjust with Swedish weights
+      POP.STD[,i] <- (wei.swe/wei.curr)*POP[,i]
+    }
+    
+    
+    maol_all <- 
+      unlist(
+        lapply(
+          cohorts_kin, 
+          get_maol_all2
+          , H = H
+          , deaths_mat = Q
+          , surv_mat = POP.STD
+          , what = "mean"
+          , cohorts = cohorts, n_col = n_col, n_row = n_row
+          , reprod_ages = reprod_ages, ages_mother = ages_mother
+        )
+      )
+    
+    
+    sd_all <- 
+      unlist(
+        lapply(
+          cohorts_kin, get_maol_all2
+          , H = H, deaths_mat = Q, surv_mat = POP.STD, what = "sd"
+          , cohorts = cohorts, n_col = n_col, n_row = n_row
+          , reprod_ages = reprod_ages, ages_mother = ages_mother
+        )
+      )
+    
+    out <- 
+      data.frame(
+        cohort = cohorts_kin
+        , country = iso
+        , M = maol_all
+        , SD = sd_all
+      ) %>% 
+      pivot_longer(c(M, SD), names_to = "measure")
+  }
 }
 
 get_maol_by_age <- function(my.coh, H, deaths_mat , surv_mat, what = "median", rescale_nu = T){
@@ -2568,9 +2635,13 @@ get_maol_by_age <- function(my.coh, H, deaths_mat , surv_mat, what = "median", r
 
 # Transform matrix Z to a lonf data frame
 # on a country by country basis
-get_curves <- function(cou, last_cohort = 2000){
+get_curves <- function(cou, last_cohort = 2000, type="main"){
   print(cou)
-  load(paste0("results/decomp/",cou,"_SSE.Rdata"))
+  if (type=="main"){
+    load(paste0("results/decomp/",cou,"_SSE.Rdata"))
+  }else if (type=="sensitivity"){
+    load(paste0("results/sensitivity/",cou,"_SSE.Rdata"))
+  }
   
   # Identify correct cohorts
   first_cohort <- last_cohort - ncol(Z) + 1
@@ -2640,7 +2711,7 @@ get_curves <- function(cou, last_cohort = 2000){
 }
 
 
-get_cd_by_age_batch <- function(iso){
+get_cd_by_age_batch <- function(iso, type="main",wei.swe=NULL){
 
   # Load data
   print(iso)
@@ -2672,7 +2743,7 @@ get_cd_by_age_batch <- function(iso){
   # 1. All-age MAOL and IQR 
   
   # nu = h_{i,j}*pop_i*q_j
-  
+  if (type=="main"){
   out <- 
     lapply(
       cohorts_kin
@@ -2687,6 +2758,32 @@ get_cd_by_age_batch <- function(iso){
     mutate(country = iso)
   
   out  
+  }else{
+    ## compute standardized population
+    POP.STD <- matrix(NA,nrow = nrow(POP),ncol = ncol(POP))
+    for (i in 1:ncol(POP)){
+      ## weights current population
+      wei.curr <- POP[,i]/sum(POP[,i])
+      ## adjust with Swedish weights
+      POP.STD[,i] <- (wei.swe/wei.curr)*POP[,i]
+    }
+    
+    out <- 
+      lapply(
+        cohorts_kin
+        , get_cd_by_age_batch2
+        , H = H
+        , deaths_mat = Q
+        , surv_mat = POP.STD
+        , cohorts = cohorts, n_col = n_col, n_row = n_row
+        , reprod_ages = reprod_ages, ages_mother = ages_mother
+      ) %>% 
+      bind_rows() %>% 
+      mutate(country = iso)
+    
+    out 
+    
+  }
 }
 
 get_cd_by_age_batch2 <- function(my.coh, H, deaths_mat , surv_mat, cohorts, n_col, n_row, reprod_ages, ages_mother){
