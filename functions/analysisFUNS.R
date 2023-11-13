@@ -2689,6 +2689,55 @@ get_cd_by_age_batch <- function(iso){
   out  
 }
 
+get_cd_by_age_batch_counterfactual <- function(iso){
+  
+  # Load data
+  print(iso)
+  
+  f <- paste0("data/clean/",iso,"_arrays_clean.rdata")
+  load(f)
+  
+  # 0. Parameters 
+  
+  ages_mother <- 0:100
+  reprod_ages <- 15:50
+  ages_child <- 0:(max(ages_mother) - min(reprod_ages))
+  
+  if(iso == "SWE"){
+    cohorts_kin <-  1765:2000
+  } else if (iso == "DNK"){
+    cohorts_kin <- 1878:2000  
+  } else {
+    # UNWPP
+    cohorts_kin <- 1950:2000
+  }
+  
+  cohorts <- cohorts_kin
+  n_row <- length(ages_mother)
+  n_col <- length(ages_child)
+  n_coh <- length(cohorts)
+  n <- length(reprod_ages)
+  
+  # 1. All-age MAOL and IQR 
+  
+  # nu = h_{i,j}*pop_i*q_j
+  
+  out <- 
+    lapply(
+      cohorts_kin
+      , get_cd_by_age_batch2_counterfactual
+      , H = H
+      , deaths_mat = Q
+      , surv_mat = POP
+      , cohorts = cohorts, n_col = n_col, n_row = n_row
+      , reprod_ages = reprod_ages, ages_mother = ages_mother
+    ) %>% 
+    bind_rows() %>% 
+    mutate(country = iso)
+  
+  out  
+}
+
 get_cd_by_age_batch2 <- function(my.coh, H, deaths_mat , surv_mat, cohorts, n_col, n_row, reprod_ages, ages_mother){
 
   whi.coh <- which(cohorts==my.coh)
@@ -2708,6 +2757,36 @@ get_cd_by_age_batch2 <- function(my.coh, H, deaths_mat , surv_mat, cohorts, n_co
         DEATHS[i,j] <- NA
       }else{
         DEATHS[i,j] <- deaths_mat[j, whi.coh + i - j]
+      }
+    } # end rows
+  } # end cols
+  
+  out <- 
+    worker_cd_by_age(myH = myH, surv_vec = surv_vec, DEATHS = DEATHS, ages_mother = ages_mother) %>% 
+    mutate(cohort = my.coh)
+  
+  return(out)
+}
+
+get_cd_by_age_batch2_counterfactual <- function(my.coh, H, deaths_mat , surv_mat, cohorts, n_col, n_row, reprod_ages, ages_mother){
+  
+  whi.coh <- which(cohorts==my.coh)
+  surv_vec <- surv_mat[,whi.coh]
+  myH <- H[,1:n_col,whi.coh]
+  DEATHS <- matrix(NA,n_row,n_col)
+  ## adjusting the deaths matrix (Q or D)
+  for(j in 1:n_col){
+    for(i in 1:n_row){
+      wrong <- 
+        (i - 1) < min(reprod_ages) | 
+        (i - 1) > max(ages_mother) | 
+        (j - 1) < max(c((i - 1) - max(reprod_ages), 0)) |
+        (j - 1) > ((i - 1) - min(reprod_ages))
+      
+      if(wrong){
+        DEATHS[i,j] <- NA
+      }else{
+        DEATHS[i,j] <- deaths_mat[1, whi.coh + i - j]
       }
     } # end rows
   } # end cols
