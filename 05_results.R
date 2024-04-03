@@ -36,7 +36,10 @@ library(tidyverse)
 library(patchwork)
 library(countrycode)
 library(ggrepel)
+library(viridis)
 source("functions/analysisFUNS.R")
+
+windowsFonts(Times=windowsFont("Times New Roman"))
 
 
 ## loading saved data
@@ -144,7 +147,7 @@ if(!file.exists("data/input/asfr_coh.csv")){
 # recompute <- T
 # If, for any reason you want to run the scripts again but don't want to
 # run the lengthy analysis scripts again, you can set recompute <- F
-recompute <- T
+recompute <- F
 
 if(!recompute){
   print("Reading analysis outcomes from disk...")
@@ -248,6 +251,7 @@ fix_axis <-
     country = factor(lookup_c[country_keep], levels = lookup_c[country_keep])
     , mother_age = 50
     , value = c(100, 1000, 2100)
+    , name = "Count"
   )
 
 # Line of overall number of deaths
@@ -260,24 +264,91 @@ counts <-
   cb2 %>%
   group_by(country, cohort, mother_age) %>% 
   summarise(value = sum(value)) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(name = "Count")
 
-cb2 %>% 
+# Add two panels below with deaths per 1,000 women
+# First, get pop data per birth cohort
+# Sweden
+load("data/clean/SWE_arrays_clean.rdata")
+
+pop1950coh_swe <- POP[,"1950"]
+rm("H", 'D', "L", "Q", "POP")
+
+# Guatemala
+load("data/clean/GTM_arrays_clean.rdata")
+
+pop1950coh_gtm <- POP[,"1950"]
+rm("H", 'D', "L", "Q", "POP")
+
+# Guatemala
+load("data/clean/AGO_arrays_clean.rdata")
+
+pop1950coh_ago <- POP[,"1950"]
+rm("H", 'D', "L", "Q", "POP")
+
+# Put together
+pop_coh <- 
+  data.frame(
+    Sweden = pop1950coh_swe
+    , Guatemala = pop1950coh_gtm
+    , Angola = pop1950coh_ago
+    , mother_age = 0:100
+  ) %>% 
+  pivot_longer(-mother_age, names_to = "country", values_to = "pop") %>% 
+  mutate(cohort = 1950)
+
+cb3 <- 
+  cb2 %>% 
+  left_join(pop_coh, by = c("country", "cohort", "mother_age")) %>% 
+  mutate(`Rate per 1000 women` = (value / pop) * 1000) %>% 
+  select(-pop) %>% 
+  rename(Count = value) %>% 
+  pivot_longer(Count:`Rate per 1000 women`) %>% 
+  mutate(country = factor(country, levels = c("Sweden", "Guatemala", "Angola")))
+
+lab_df <-
+  cb3 %>% 
+  group_by(country, name, mother_age) %>% 
+  summarise(value = sum(value)) %>% 
+  arrange(desc(value)) %>% 
+  slice(1) %>% 
+  ungroup() %>% 
+  arrange(name, country) %>% 
+  mutate(
+    mother_age = 50
+    # , label = LETTERS[1:6]
+    , label = paste0("(",letters[1:6],")")
+    )
+
+cb3 %>% 
   ggplot(aes(x = mother_age, y = value)) +
   geom_area(aes(fill = child_age), colour = "black") +
   geom_point(data = counts) +
   geom_point(data = fix_axis, colour = "white") +
-  scale_fill_brewer("Offspring's age at death", palette = "Dark2") +
+  # Panel labels
+  geom_text(
+    aes(label = label)
+    , family = "Times"
+    , data = lab_df 
+  ) +
+  # scale_fill_brewer("Offspring's age at death", palette = "Dark2") +
+  scale_fill_viridis_d("Offspring's age at death") +
   scale_x_continuous("Age of mothers born in 1950") +
-  scale_y_continuous("Offspring deaths (count)", breaks = scales::pretty_breaks(n=5)) +
-  facet_wrap(~country, scales = "free") +
+  scale_y_continuous(
+    "Offspring deaths", breaks = scales::pretty_breaks(n=5)
+    , labels = function(x) format(x, big.mark = ",")
+    ) +
+  facet_wrap(name~country, scales = "free") +
   theme_bw() +
   theme(
     legend.position = "bottom"
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
+    , text=element_text(family="Times")
   )
 
-ggsave("figures/summary/!1_counts_by_child_age_death.pdf", width = 6, height = 3, units = "in")
+# ggsave("figures/summary/!1_counts_by_child_age_death.pdf", width = 6, height = 6, units = "in")
+ggsave("figures/summary/Fig3.pdf", width = 6, height = 6, units = "in")
 
 # 2. Summary measures (nondecomposed) =================
 
@@ -308,7 +379,7 @@ all_measures %>%
     , l1 = str_extract(measure, "[A-Z]+")
     , l2 = paste0("Component ", str_extract(measure, "[0-9]+"))
     , l1 = gsub("M", "Mean", l1)
-    , l1 = gsub("SD", "Standard Deviation", l1)
+    , l1 = gsub("SD", "Standard deviation", l1)
   ) %>% 
   ggplot() +
   # backgprund lines
@@ -335,6 +406,7 @@ all_measures %>%
     )
     , nudge_x = -2
     , size = 3
+    , family = "Times"
     , show.legend = F
   ) +
   # Rectangle to show hist data
@@ -358,18 +430,19 @@ all_measures %>%
   scale_color_brewer("Mortality group", palette = pal) +
   scale_shape_discrete("Mortality group") +
   scale_x_continuous("Mother's birth cohort") +
-  scale_y_continuous("Maternal age (years)") +
+  scale_y_continuous("Maternal age at offspring loss (years)") +
   theme_bw() +
   theme(
     legend.position = "bottom"
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
+    , text=element_text(family="Times")
   ) 
 
-ggsave("figures/summary/!2_summary_nondecomp.pdf", width = 5, height = 3, units = "in")
+# ggsave("figures/summary/!2_summary_nondecomp.pdf", width = 5, height = 3.5, units = "in")
+ggsave("figures/summary/Fig4.pdf", width = 5, height = 3.5, units = "in")
 
 # 3. Count of child deaths decomposed ============
 # rcode ldshih
-
 
 # A dummy df to make sure that y axes are the same in the plots
 # showing the distributinos
@@ -378,10 +451,9 @@ fix_axis2 <-
   rename(age = mother_age, country_full = country) %>% 
   mutate(measure = "GAMMA1.hat")
 
-
 # Plot raw curves
 
-lookup_comp <- c("Component 1: Young child deaths", "Component 2: Adult child deaths")
+lookup_comp <- c("Component 1: Young offspring deaths", "Component 2: Adult offspring deaths")
 names(lookup_comp) <- c("GAMMA1.hat", "GAMMA2.hat")
 
 dec <- 
@@ -423,7 +495,7 @@ dec %>%
 w_lab <- 
   data.frame(
     age = 40, value = 80, measure = "GAMMA1.hat", country_full = "Sweden"
-    , label = "relative\nimportance"
+    , label = "Relative\nimportance"
     ) %>% 
   mutate(country_full = factor(country_full, levels = lookup_c[country_keep]))
 
@@ -437,7 +509,6 @@ w2 <-
     , by = "country_full"
   ) %>% 
   mutate(country_full = factor(country_full, levels = lookup_c[country_keep]))
-
   
 # Fitted values
 
@@ -471,6 +542,7 @@ dec %>%
     aes(label = label)
     , label.size = NA
     , size = 3
+    , family = "Times"
     , data = w_lab
     , show.legend = F
   ) +
@@ -479,6 +551,7 @@ dec %>%
     aes(label = label, colour = measure)
     , data = w_xy
     , size = 3
+    , family = "Times"
     , show.legend = F
   ) +
   # Real values
@@ -488,24 +561,29 @@ dec %>%
   ) +
   # To fix axis
   geom_point(data = fix_axis2, colour = "white") + 
-  scale_color_brewer("", labels = lookup_comp, palette = pal) +
-  scale_fill_brewer("", labels = lookup_comp, palette = pal) +
+  scale_color_viridis_d("", labels = lookup_comp) +
+  scale_fill_viridis_d("", labels = lookup_comp) +
   scale_x_continuous("Age of mothers born in 1950") +
-  scale_y_continuous("Offspring deaths (count)", breaks = scales::pretty_breaks(n=5)) +
+  scale_y_continuous(
+    "Offspring deaths (counts)", breaks = scales::pretty_breaks(n=5)
+    , labels = function(x) format(x, big.mark = ",")
+    ) +
   facet_wrap(~country_full, scales = "free") +
   theme_bw() +
   theme(
     legend.position = "bottom"
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
+    , text=element_text(family="Times")
   )
 
-ggsave("figures/summary/!3_counts_components.pdf", width = 6, height = 3, units = "in")
+# ggsave("figures/summary/!3_counts_components.pdf", width = 6, height = 3, units = "in")
+ggsave("figures/summary/Fig5.pdf", width = 6, height = 3, units = "in")
 
 # 4. Summary measures (decomposed) ========
 
 # rcode oduha8ij
 
-lookup_comp2 <- c("Component 1: Young child deaths", "Component 2: Adult child deaths")
+lookup_comp2 <- c("Component 1: Young offspring deaths", "Component 2: Adult offspring deaths")
 names(lookup_comp2) <- c("Component 1", "Component 2")
 
 m_keep2 <- c("M1", "M2", "SD1", "SD2")
@@ -520,7 +598,7 @@ dec_df <-
     , l1 = str_extract(measure, "[A-Z]+")
     , l2 = paste0("Component ", str_extract(measure, "[0-9]+"))
     , l1 = gsub("M", "Mean", l1)
-    , l1 = gsub("SD", "Standard Deviation", l1)
+    , l1 = gsub("SD", "Standard deviation", l1)
   )
 
 # To show historical data
@@ -533,8 +611,9 @@ rect_df <-
     , mort = factor("low", levels = ml_levs)
   )
 
-p <- 
-  dec_df %>% 
+# plot without weights
+
+dec_df %>% 
   mutate(l2 = lookup_comp2[l2]) %>% 
   filter(cohort >= year_low) %>% 
   ggplot() +
@@ -562,6 +641,7 @@ p <-
     )
     , nudge_x = -2
     , size = 3
+    , family = "Times"
     , show.legend = F
   ) +
   # Rectangle to show hist data
@@ -585,13 +665,19 @@ p <-
   scale_color_brewer("Mortality group", palette = pal) +
   scale_shape_discrete("Mortality group") +
   scale_x_continuous("Mother's birth cohort") +
-  scale_y_continuous("Maternal age (years)") +
+  scale_y_continuous("Maternal age at offspring loss (years)") +
   theme_bw() +
   theme(
     legend.position = "bottom"
     , plot.margin = margin(0,0, 0, 0, "cm")
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
-  ) 
+    , text=element_text(family="Times")
+     ) 
+
+# ggsave("figures/summary/!4_summary_decomp1.pdf", width = 6, height = 5, units = "in")
+ggsave("figures/summary/Fig7.pdf", width = 6, height = 5, units = "in")
+
+# plot of weights ====
 
 # DF of weights
 
@@ -603,7 +689,7 @@ w_df <-
     cohort = as.numeric(cohort)
     , l2 = "Component 1"
   ) %>% 
-  select(country, cohort, mort, value, l2)
+  select(country, country_full, cohort, mort, value, l2)
 
 w_df <- 
   bind_rows(
@@ -617,8 +703,8 @@ w_df <-
   mutate(l1 = "Weight") %>% 
   mutate(l2 = lookup_comp2[l2])
 
-p_w <- 
-  w_df %>%
+w_df %>%
+  filter(l2  =='Component 1: Young offspring deaths') %>% 
   ggplot() +
   # backgprund lines
   geom_line(
@@ -626,7 +712,7 @@ p_w <-
     , data = . %>% filter(!country %in% country_keep) 
     , size = 0.3
     , alpha = 0.4
-    , show.legend = F
+    # , show.legend = F
   ) +  
   # HIghlighted lines
   geom_line(
@@ -637,6 +723,18 @@ p_w <-
     , size = 1
     , show.legend = F
   ) +
+  # Country labels
+  geom_label_repel(
+    aes(x = cohort, y = value, colour = mort, label = lookup_c[country])
+    , data = . %>% filter(
+      country %in% country_keep
+      , cohort == 1950
+    )
+    , nudge_x = -2
+    , size = 3
+    , family = "Times"
+    , show.legend = F
+  ) +
   # Shape to identify countries
   geom_point(
     aes(x = cohort, y = value, colour = mort, shape = mort)
@@ -645,27 +743,21 @@ p_w <-
       , cohort %in% pf
     )
     , size = 3
-    , show.legend = F
+    # , show.legend = F
   ) +
   scale_y_continuous(breaks = scales::pretty_breaks(n=3)) +
-  scale_color_brewer("", palette = pal) +
-  facet_grid(. ~ l2 , scales = "fixed") +
-  labs(x = "", y = "Relative\nimportance") +
+  scale_color_brewer("Mortality group", palette = pal) +
+  scale_shape("Mortality group") +
+  labs(x = "Mother's birth cohort", y = "Relative importance\n(young component)") +
   coord_cartesian(ylim = c(0,1))+
-  theme_minimal() +
+  theme_bw() +
   theme(
     legend.position = "bottom"
-    , axis.title.x=element_blank()
-    , axis.text.x=element_blank()
-    , axis.ticks.x=element_blank()
-    , strip.text.x = element_blank()
-    , plot.margin = margin(0,0, 0, 0, "cm")
+    , text=element_text(family="Times")
   ) 
 
-p_w / p +
-  plot_layout(widths = c(2, 1), heights = unit(c(1.75, 5), c('cm', 'null')))
-
-ggsave("figures/summary/!4_summary_decomp.pdf", width = 5, height = 5, units = "in")
+# ggsave("figures/summary/!5_rel_imp.pdf", width = 4.5, height = 3, units = "in")
+ggsave("figures/summary/Fig6.pdf", width = 4.5, height = 3, units = "in")
 
 # 5. Share of children outlive mothers =========
 # rcode kjgw76
@@ -704,6 +796,7 @@ all_measures %>%
     , nudge_x = 1
     , nudge_y = 0.005
     , size = 3
+    , family = "Times"
     , show.legend = F
   ) +
   # REct to show hist data
@@ -725,11 +818,106 @@ all_measures %>%
   scale_color_brewer("Mortality group", palette = pal) +
   scale_shape_discrete("Mortality group") +
   scale_x_continuous("Mother's birth cohort") +
-  scale_y_continuous("Offspring die before mother", labels = function(x) paste0(round(x*100), "%")) +
+  scale_y_continuous("Percentage of offspring expected\nto die before their mother", labels = function(x) paste0(round(x*100), "")) +
   theme_bw() +
   theme(
     legend.position = "bottom"
     , strip.background = element_rect(fill = "honeydew2", colour = "black")
+    , text=element_text(family="Times")
   ) 
 
-ggsave("figures/summary/!5_share_child_die.pdf", width = 4, height = 3, units = "in")
+# ggsave("figures/summary/!5_share_child_die.pdf", width = 4, height = 3, units = "in")
+ggsave("figures/summary/Fig2.pdf", width = 4, height = 3, units = "in")
+
+# 6. Create Lexis diagram ----
+
+r <- 0:50
+mu <- 30
+shift <- 5
+j <- mu + shift
+max_j <- max(r) - shift - mu
+max_i <- max(r) - shift
+line_size <- 1
+
+br <- c(shift, j, max(r))
+labs <- c("t - i", "t - j", "t")
+labs <- paste0("Year\n", labs)
+
+br_y <- c(max_j, max_i)
+labs_y <- c("j", "i")
+labs_y <- paste0("Age\n   ", labs_y)
+
+lex <- 
+  data.frame(x = r) %>% 
+  mutate(
+    mother = x - shift
+    , child = mother - mu
+  ) %>% 
+  pivot_longer(-x) 
+
+labs1 <- data.frame(x = 48, value = 17, label = "Child deaths aged j\nto mothers aged i")
+
+labs2 <- data.frame(x = 12, value = 10, label = "Mother's birth cohort")
+
+labs3 <- data.frame(
+  x = max(r) - (max(r) - mu) + 4
+  , value = (max_i - max_j)
+  , label = "Childbirth"
+)
+
+ggplot(mapping = aes(x = x, y = value)) +
+  # lexis lines
+  geom_line(
+    aes(group = name)
+    , data = lex
+    , size = line_size
+  ) +
+  # vertical line
+  geom_line(
+    data = data.frame(x = shift + mu, value = c(0, mu))
+    , linetype = "dashed"
+    , size = line_size
+  ) +
+  # show child death with a cross
+  geom_point(
+    data = data.frame(x = max(r), value = max_j)
+    , shape = 3
+    , size = 2
+    , stroke = 2
+    # , colour = "red"
+  )+
+  # Child deaths + childbirth
+  geom_label_repel(
+    aes(label = label)
+    , nudge_x = -14
+    , nudge_y = 1
+    , label.size = NA
+    , arrow = arrow(length = unit(0.015, "npc"))
+    , data = labs1 %>% bind_rows(labs3)
+    , family = "Times"
+  ) +
+  # Mother cohort
+  geom_text(
+    aes(label = label)
+    , angle = 45
+    , data = labs2
+    , family = "Times"
+  ) +
+  scale_x_continuous(breaks = br, labels = labs) +
+  scale_y_continuous(breaks = br_y, labels = labs_y, position = "right") +
+  coord_equal(xlim = c(min(r), max(r)+3), ylim = range(r), expand = F) +
+  theme_bw() +
+  theme(
+    axis.title.x=element_blank()
+    , axis.text.x = element_text(size = 14)
+    , axis.title.y=element_blank()
+    , axis.text.y = element_text(size = 14)
+    # , axis.text.y=element_blank()
+    # , axis.ticks.y=element_blank()
+    , panel.grid.major = element_blank()
+    , panel.grid.minor = element_blank()
+    , plot.margin=grid::unit(c(0,0,0,0), "mm")
+    , text=element_text(family="Times")
+  )
+
+ggsave("figures/Fig1.pdf", width = 4.5, height = 4.5, units = "in")  
