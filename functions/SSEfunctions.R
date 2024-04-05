@@ -79,9 +79,9 @@ SSEfun <- function(x,cohorts,Z,cou,
   ## select ages for each component
   ## infant component
   staINF <- min(x)
-  endINF <- max(x) - 20
+  endINF <- max(x) - 30
   ## adult component
-  staAGI <- min(x) + 10
+  staAGI <- min(x) + 20
   endAGI <- max(x)
   ## select data and create weights for each age-window
   ## infant component
@@ -163,12 +163,12 @@ SSEfun <- function(x,cohorts,Z,cou,
   ## for the infant component
   if (cou == "IND"| cou == "USA"){
     ZZ1 <- Z1
-    ZZ1[x1>=35] <- 0
-    WW1 <- matrix(0,length(x1),n)
-    WW1[x1<=35,] <- 1
+    ## complete with a line that goes to zero
+    for (i in 1:ncol(Z1)){
+      ZZ1[x1>35,i] <- seq(ZZ1[x1==35,i],0,length=length(x1)-35+14)
+    }
+    ## fitting
     fit1 <- Mort2Dsmooth(x=x1, y=y, Z=ZZ1,
-                         # offset=log(E1),
-                         W=WW1,
                          method=3,
                          lambdas=c(10^1, 10^2),
                          ndx = c(degx1, degy1),
@@ -184,12 +184,12 @@ SSEfun <- function(x,cohorts,Z,cou,
   }else if (cou == "AGO" | cou == "GTM" | cou == "BFA" | cou == "TCD" | 
             cou == "SEN" | cou == "MLI" | cou == "GHA"){
     ZZ1 <- Z1
-    ZZ1[x1>=45] <- 0
-    WW1 <- matrix(0,length(x1),n)
-    WW1[x1<=45,] <- 1
+    ## complete with a line that goes to zero
+    for (i in 1:ncol(Z1)){
+      ZZ1[x1>45,i] <- seq(ZZ1[x1==45,i],0,length=length(x1)-45+14)
+    }
+    ## fitting
     fit1 <- Mort2Dsmooth(x=x1, y=y, Z=ZZ1,
-                         # offset=log(E1),
-                         W=WW1,
                          method=3,
                          lambdas=c(10^1, 10^1),
                          ndx = c(degx1, degy1),
@@ -204,12 +204,12 @@ SSEfun <- function(x,cohorts,Z,cou,
     Z1.stA[W1==1] <- z1.st
   }else{
     ZZ1 <- Z1
-    ZZ1[x1>=40] <- 0
-    WW1 <- matrix(0,length(x1),n)
-    WW1[x1<=40,] <- 1
+    ## complete with a line that goes to zero
+    for (i in 1:ncol(Z1)){
+      ZZ1[x1>40,i] <- seq(ZZ1[x1==40,i],0,length=length(x1)-40+14)
+    }
+    ## fitting
     fit1 <- Mort2Dsmooth(x=x1, y=y, Z=ZZ1,
-                         # offset=log(E1),
-                         W=WW1,
                          method=3,
                          lambdas=c(10^1, 10^2),
                          ndx = c(degx1, degy1),
@@ -224,14 +224,19 @@ SSEfun <- function(x,cohorts,Z,cou,
     Z1.stA[W1==1] <- z1.st
   }
   
+  # plot(x1,ZZ1[,1])
+  # lines(x1,fit1$fitted.values[,1])
+  
   ## for the adult component
   if (cou=="ZWE" | cou == "IND" | cou == "USA" | cou == "CHN" | cou == "MMR"){
     ZZ2 <- Z2
-    ZZ2[x2<=40] <- 0
-    WW2 <- matrix(0,length(x2),n)
-    WW2[x2>=40] <- 1
+    ## complete with a line that goes to zero
+    for (i in 1:ncol(Z1)){
+      ZZ2[x2<50,i] <- seq(0,ZZ2[x2=50,i],length=sum(x2<50))
+      # ZZ1[x1>55,i] <- seq(0,0,length=length(x1)-55+14)
+    }
+    ## fitting
     fit2 <- Mort2Dsmooth(x=x2, y=y, Z=ZZ2, 
-                         W=WW2,
                          method=3, lambdas=c(10^1, 10^2),
                          ndx = c(degx2, degy2),
                          deg = c(3,3), pord = c(2,2))
@@ -245,12 +250,13 @@ SSEfun <- function(x,cohorts,Z,cou,
     Z2.stA[W2==1] <- z2.st
   }else if (cou=="AGO"){
     ZZ2 <- Z2
-    ZZ2[x2<=55] <- 0
-    WW2 <- matrix(0,length(x2),n)
-    WW2[x2>=55] <- 1
+    for (i in 1:ncol(Z1)){
+      ZZ2[x2<65,i] <- seq(0,ZZ2[x2==65,i],length=sum(x2<65))
+    }
+    ## fitting
     fit2 <- Mort2Dsmooth(x=x2, y=y, Z=ZZ2, 
-                         W=WW2,
-                         method=3, lambdas=c(10^1, 10^1),
+                         # W=WW2,
+                         method=3, lambdas=c(10^1, 10^2),
                          ndx = c(degx2, degy2),
                          deg = c(3,3), pord = c(2,2))
     ## starting coefficients for the senescence component
@@ -263,11 +269,10 @@ SSEfun <- function(x,cohorts,Z,cou,
     Z2.stA[W2==1] <- z2.st
   }else{
     ZZ2 <- Z2
-    ZZ2[x2<=50] <- 0
-    WW2 <- matrix(0,length(x2),n)
-    WW2[x2>=50] <- 1
+    for (i in 1:ncol(Z1)){
+      ZZ2[x2<55,i] <- seq(0,ZZ2[x2==55,i],length=sum(x2<55))
+    }
     fit2 <- Mort2Dsmooth(x=x2, y=y, Z=ZZ2, 
-                         W=WW2,
                          method=3, lambdas=c(10^1, 10^2),
                          ndx = c(degx2, degy2),
                          deg = c(3,3), pord = c(2,2))
@@ -280,6 +285,9 @@ SSEfun <- function(x,cohorts,Z,cou,
     Z2.stA <- matrix(0, m, n) 
     Z2.stA[W2==1] <- z2.st
   }
+  
+  # plot(x2,ZZ2[,1])
+  # lines(x2,fit2$fitted.values[,1])
   
   ## all deaths
   Z.st <- Z1.stA + Z2.stA 
@@ -440,9 +448,9 @@ SSEfun <- function(x,cohorts,Z,cou,
   ## small ridge penalty for numerical stability
   Pr <- 10^-4 * diag.spam(length(coef.st))
   ## maximum number of iteration
-  if (is.null(max.it)) max.it <- 300
+  if (is.null(max.it)) max.it <- 150
   ## smoothing parameters
-  if (is.null(lambdas)) lambdas <- c(10^1.5,10^1.5,10^1.5)
+  if (is.null(lambdas)) lambdas <- c(10^1,10^2,10^2)
   ## start time
   start_time <- Sys.time()
   ## estimating the SSE
