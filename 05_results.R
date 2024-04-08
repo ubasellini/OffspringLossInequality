@@ -546,14 +546,6 @@ dec %>%
     , data = w_lab
     , show.legend = F
   ) +
-  # Text to identify components
-  geom_label(
-    aes(label = label, colour = measure)
-    , data = w_xy
-    , size = 3
-    , family = "Times"
-    , show.legend = F
-  ) +
   # Real values
   geom_point(
     data = .  %>% filter(measure == "count") 
@@ -568,6 +560,15 @@ dec %>%
     "Offspring deaths (counts)", breaks = scales::pretty_breaks(n=5)
     , labels = function(x) format(x, big.mark = ",")
     ) +
+  # Text to identify components
+  geom_label(
+    aes(label = label)
+    , data = w_xy
+    , size = 3
+    , nudge_x = 2
+    , family = "Times"
+    , show.legend = F
+  ) +
   facet_wrap(~country_full, scales = "free") +
   theme_bw() +
   theme(
