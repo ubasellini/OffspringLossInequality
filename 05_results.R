@@ -301,10 +301,10 @@ pop_coh <-
 cb3 <- 
   cb2 %>% 
   left_join(pop_coh, by = c("country", "cohort", "mother_age")) %>% 
-  mutate(`Rate per 1000 women` = (value / pop) * 1000) %>% 
+  mutate(`Rate per 1,000 women` = (value / pop) * 1000) %>% 
   select(-pop) %>% 
   rename(Count = value) %>% 
-  pivot_longer(Count:`Rate per 1000 women`) %>% 
+  pivot_longer(Count:`Rate per 1,000 women`) %>% 
   mutate(country = factor(country, levels = c("Sweden", "Guatemala", "Angola")))
 
 lab_df <-
